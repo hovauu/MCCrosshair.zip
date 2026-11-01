@@ -11,6 +11,9 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.inputmethod.InputMethodManager
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -24,6 +27,9 @@ import kotlin.math.roundToInt
 class CrosshairService : AccessibilityService(), SharedPreferences.OnSharedPreferenceChangeListener {
 
     companion object {
+        /** Последнее открытое приложение — показывается в Настройках для проверки. */
+        var lastApp by mutableStateOf<String?>(null)
+
         fun isEnabled(ctx: Context): Boolean {
             val flat = Settings.Secure.getString(
                 ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
@@ -55,16 +61,38 @@ class CrosshairService : AccessibilityService(), SharedPreferences.OnSharedPrefe
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
+        if (pkg in imePackages) return
 
-        // Шторка, клавиатура и собственные окна-оверлеи не считаются сменой приложения
-        if (pkg == "com.android.systemui" || pkg in imePackages) return
-        if (pkg == packageName && event.className?.toString() != MainActivity::class.java.name) return
+        val targets = state?.targets ?: AppState.load(appPrefs()).targets
 
-        val targets = state?.targets ?: return
-        val now = pkg in targets
+        val now = when {
+            // Любое событие от выбранной игры = игра на экране
+            pkg in targets -> true
+            // Смена на другое приложение засчитывается, только если открылась его activity.
+            // Всплывашки поверх игры (Game Turbo, уведомления, тосты, диалоги) игнорируются.
+            isActivity(pkg, event.className?.toString()) -> false
+            else -> return
+        }
+
+        if (pkg != packageName) lastApp = pkg
         if (now != inTarget) {
             inTarget = now
             refresh()
+        }
+    }
+
+    private val activityCache = HashMap<String, Boolean>()
+
+    private fun isActivity(pkg: String, cls: String?): Boolean {
+        if (cls.isNullOrEmpty()) return false
+        val key = "$pkg/$cls"
+        return activityCache.getOrPut(key) {
+            try {
+                packageManager.getActivityInfo(ComponentName(pkg, cls), 0)
+                true
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 

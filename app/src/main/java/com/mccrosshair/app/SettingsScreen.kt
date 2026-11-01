@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun SettingsScreen(serviceOn: Boolean, onBack: () -> Unit) {
+fun SettingsScreen(store: SettingsStore, serviceOn: Boolean, onBack: () -> Unit) {
     val ctx = LocalContext.current
     val p = LocalPalette.current
 
@@ -61,6 +61,28 @@ fun SettingsScreen(serviceOn: Boolean, onBack: () -> Unit) {
                 color = p.textDim, fontSize = 14.sp
             )
             OutlinedButton(onClick = { SystemScreens.appDetails(ctx) }) { Text("О приложении") }
+        }
+
+        SectionCard {
+            Text("Проверка автозапуска", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            val last = CrosshairService.lastApp
+            val inList = last != null && last in store.state.targets
+            Text(
+                when {
+                    !serviceOn -> "Сначала включи службу."
+                    last == null -> "Открой игру, потом вернись сюда — здесь появится её пакет."
+                    else -> "Последнее открытое приложение:\n$last" +
+                        if (inList) "\n✓ уже в списке" else "\n✗ не в списке — прицел в нём не включится"
+                },
+                Modifier.padding(top = 4.dp, bottom = 10.dp),
+                color = p.textDim, fontSize = 14.sp
+            )
+            if (last != null && !inList) {
+                Button(onClick = {
+                    val set = store.state.targets + last
+                    store.edit { putString(K.TARGETS, set.joinToString("\n")) }
+                }) { Text("Добавить в список") }
+            }
         }
 
         SectionCard {

@@ -12,13 +12,27 @@ android {
         applicationId = "com.mccrosshair.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
+    }
+
+    // Постоянный ключ подписи: благодаря ему новые версии ставятся поверх старых
+    signingConfigs {
+        create("main") {
+            storeFile = file("mccrosshair.jks")
+            storePassword = "mccrosshair"
+            keyAlias = "mccrosshair"
+            keyPassword = "mccrosshair"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("main")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("main")
         }
     }
 
