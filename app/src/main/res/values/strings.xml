@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Прицел MC</string>
+    <string name="a11y_description">Показывает прицел поверх игры и сам включает его, когда вы открываете Minecraft. Служба не читает содержимое экрана и не собирает никаких данных.</string>
+</resources>

@@ -1,0 +1,110 @@
+package com.mccrosshair.app
+
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+@Composable
+fun SettingsScreen(store: SettingsStore, serviceOn: Boolean, onBack: () -> Unit) {
+    val ctx = LocalContext.current
+    val p = LocalPalette.current
+    var targets by remember {
+        mutableStateOf(store.prefs.getString(K.TARGETS, Defaults.TARGETS) ?: Defaults.TARGETS)
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = p.text) }
+            Spacer(Modifier.width(8.dp))
+            Text("Настройки", fontSize = 20.sp, fontWeight = FontWeight.Medium)
+        }
+
+        SectionCard {
+            Text("Служба прицела", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text(
+                if (serviceOn) "Включена ✓" else "Выключена",
+                Modifier.padding(top = 4.dp, bottom = 10.dp),
+                color = if (serviceOn) p.accent else p.warn
+            )
+            Button(onClick = { SystemScreens.accessibility(ctx) }) { Text("Специальные возможности") }
+            Text(
+                "Не включается («Ограниченная настройка»)? Открой «О приложении» → ⋮ → " +
+                    "«Разрешить ограниченные настройки» и попробуй снова.",
+                Modifier.padding(top = 10.dp, bottom = 8.dp),
+                color = p.textDim, fontSize = 14.sp
+            )
+            OutlinedButton(onClick = { SystemScreens.appDetails(ctx) }) { Text("О приложении") }
+        }
+
+        SectionCard {
+            Text("Игры для автозапуска", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text(
+                "Один пакет в строке. Minecraft — com.mojang.minecraftpe. " +
+                    "Если играешь через другой лаунчер, впиши его пакет.",
+                Modifier.padding(top = 4.dp, bottom = 10.dp),
+                color = p.textDim, fontSize = 14.sp
+            )
+            OutlinedTextField(
+                value = targets,
+                onValueChange = { targets = it },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(onClick = {
+                val clean = AppState.parseTargets(targets).joinToString("\n")
+                targets = clean
+                store.edit { putString(K.TARGETS, clean) }
+                Toast.makeText(ctx, "Сохранено", Toast.LENGTH_SHORT).show()
+            }) { Text("Сохранить") }
+        }
+
+        SectionCard {
+            Text("Чтобы телефон не выключал прицел", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text(
+                "На Xiaomi, Huawei, Samsung и других система может отключать службу ради экономии " +
+                    "батареи. Найди «Прицел MC» в списке и выбери «Без ограничений».",
+                Modifier.padding(top = 4.dp, bottom = 10.dp),
+                color = p.textDim, fontSize = 14.sp
+            )
+            OutlinedButton(onClick = { SystemScreens.battery(ctx) }) { Text("Экономия батареи") }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
