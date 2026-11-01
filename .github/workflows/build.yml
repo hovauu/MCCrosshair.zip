@@ -22,7 +22,13 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
+      - name: Name APK by version
+        run: |
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          mv app/build/outputs/apk/debug/app-debug.apk "MCCrosshair-$VERSION.apk"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: MCCrosshair-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: MCCrosshair-${{ env.VERSION }}
+          path: MCCrosshair-${{ env.VERSION }}.apk
