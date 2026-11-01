@@ -82,7 +82,7 @@ private fun AppRoot(store: SettingsStore, serviceOn: Boolean) {
         if (screen == 0) {
             MainScreen(store, serviceOn, openSettings = { screen = 1 })
         } else {
-            SettingsScreen(store, serviceOn, onBack = { screen = 0 })
+            SettingsScreen(serviceOn, onBack = { screen = 0 })
         }
     }
 }

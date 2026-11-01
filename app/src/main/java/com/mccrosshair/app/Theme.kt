@@ -18,6 +18,7 @@ data class Palette(
     val pill: Color,
     val pillFill: Color,
     val tile: Color,
+    val btn: Color,
     val warn: Color,
 )
 
@@ -28,9 +29,10 @@ val DarkPalette = Palette(
     textDim = Color(0xFF8A8D96),
     accent = Color(0xFFB4C3FF),
     chip = Color(0xFF3F4453),
-    pill = Color(0xFF2A2D36),
+    pill = Color(0xFF17181D),
     pillFill = Color(0xFF334173),
     tile = Color(0xFF353A48),
+    btn = Color(0xFF17181D),
     warn = Color(0xFFFFB4A9),
 )
 
@@ -44,6 +46,7 @@ val LightPalette = Palette(
     pill = Color(0xFFE6E8F0),
     pillFill = Color(0xFFB9C4F2),
     tile = Color(0xFF353A48),
+    btn = Color(0xFFECEEF4),
     warn = Color(0xFFB3261E),
 )
 

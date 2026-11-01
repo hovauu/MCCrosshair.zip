@@ -6,11 +6,9 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -26,9 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -96,84 +92,37 @@ fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
             .padding(bottom = 12.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(p.card)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         content = content
     )
 }
 
 @Composable
-fun SwitchRow(title: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+fun SwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled) { onChange(!checked) }
-            .padding(vertical = 10.dp),
+            .clickable { onChange(!checked) }
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            title,
-            Modifier.weight(1f).padding(end = 12.dp),
-            color = if (enabled) p.text else p.textDim,
-            fontSize = 17.sp
-        )
+        Text(title, Modifier.weight(1f).padding(end = 12.dp), color = p.text, fontSize = 18.sp)
         Switch(
             checked = checked,
             onCheckedChange = onChange,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = p.accent,
-                checkedThumbColor = p.bg,
-            )
+            colors = SwitchDefaults.colors(checkedTrackColor = p.accent, checkedThumbColor = p.bg)
         )
     }
 }
 
 @Composable
-fun Segmented(left: String, right: String, rightSelected: Boolean, onSelect: (Boolean) -> Unit) {
-    val p = LocalPalette.current
-    val shape = RoundedCornerShape(50)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .clip(shape)
-            .border(1.dp, p.chip, shape)
-    ) {
-        listOf(false to left, true to right).forEach { (isRight, label) ->
-            val selected = isRight == rightSelected
-            Row(
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(if (selected) p.chip else Color.Transparent)
-                    .clickable { onSelect(isRight) },
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (selected) {
-                    Icon(Icons.Filled.Check, null, tint = p.text, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(label, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            }
-        }
-    }
-}
-
-@Composable
-fun BigAction(
-    label: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-    icon: @Composable () -> Unit,
-) {
+fun BigAction(label: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
     val p = LocalPalette.current
     Column(
         Modifier
             .clip(RoundedCornerShape(20.dp))
-            .clickable(enabled = enabled, onClick = onClick)
-            .alpha(if (enabled) 1f else 0.4f)
+            .clickable(onClick = onClick)
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -183,9 +132,36 @@ fun BigAction(
     }
 }
 
+/** Кнопка-«таблетка» как на скриншотах: иконка + текст акцентного цвета. */
+@Composable
+fun PillButton(text: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    Row(
+        modifier
+            .clip(RoundedCornerShape(50))
+            .background(p.btn)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 22.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = p.accent, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(text, color = p.accent, fontSize = 17.sp)
+    }
+}
+
+/** Кнопка «Сброс», прижатая вправо. */
+@Composable
+fun ResetRow(text: String = "Сброс", onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp)) {
+        Spacer(Modifier.weight(1f))
+        PillButton(text, Icons.Filled.Refresh, onClick = onClick)
+    }
+}
+
 /**
- * Ползунок-плашка как на макете: вся плашка — это шкала,
- * заливка показывает значение. Тянуть или нажимать в нужное место.
+ * Ползунок-плашка: вся плашка — шкала, заливка показывает значение.
+ * Тянуть пальцем или нажимать в нужное место.
  */
 @Composable
 fun PillSlider(
@@ -195,7 +171,6 @@ fun PillSlider(
     range: ClosedFloatingPointRange<Float>,
     step: Float,
     format: (Float) -> String,
-    stepButtons: Boolean = false,
     onChange: (Float) -> Unit,
 ) {
     val p = LocalPalette.current
@@ -207,57 +182,74 @@ fun PillSlider(
 
     val fraction = ((value - range.start) / span).coerceIn(0f, 1f)
 
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (stepButtons) {
-            StepButton(Icons.Filled.Remove) { cb(snap(value - step)) }
-            Spacer(Modifier.width(8.dp))
-        }
-        Box(
-            Modifier
-                .weight(1f)
-                .height(56.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(p.pill)
-                .pointerInput(range) {
-                    detectTapGestures { o -> cb(fromX(o.x, size.width)) }
-                }
-                .pointerInput(range) {
-                    detectHorizontalDragGestures { change, _ ->
-                        change.consume()
-                        cb(fromX(change.position.x, size.width))
-                    }
-                }
-        ) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(p.pillFill))
-            Row(
-                Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(icon, null, tint = p.text, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(label, color = p.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Spacer(Modifier.weight(1f))
-                Text(format(value), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .height(58.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(p.pill)
+            .pointerInput(range) {
+                detectTapGestures { o -> cb(fromX(o.x, size.width)) }
             }
-        }
-        if (stepButtons) {
-            Spacer(Modifier.width(8.dp))
-            StepButton(Icons.Filled.Add) { cb(snap(value + step)) }
+            .pointerInput(range) {
+                detectHorizontalDragGestures { change, _ ->
+                    change.consume()
+                    cb(fromX(change.position.x, size.width))
+                }
+            }
+    ) {
+        Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(p.pillFill))
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = p.text, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(14.dp))
+            Text(label, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.weight(1f))
+            Text(format(value), color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
+/** Плашка «X | 1» как на скриншоте. */
 @Composable
-private fun StepButton(icon: ImageVector, onClick: () -> Unit) {
+fun ValueChip(label: String, value: Int) {
+    val p = LocalPalette.current
+    Row(
+        Modifier.padding(vertical = 5.dp).height(40.dp).clip(RoundedCornerShape(50)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.fillMaxHeight().background(p.accent).padding(horizontal = 14.dp),
+            contentAlignment = Alignment.Center
+        ) { Text(label, color = p.bg, fontSize = 17.sp) }
+        Box(
+            Modifier.fillMaxHeight().background(p.btn).padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) { Text(value.toString(), color = p.text, fontSize = 17.sp) }
+    }
+}
+
+/** Круглая кнопка-стрелка. */
+@Composable
+fun ArrowButton(icon: ImageVector, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
         Modifier
-            .size(44.dp)
+            .size(56.dp)
             .clip(CircleShape)
-            .background(p.pill)
+            .background(p.btn)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, null, tint = p.text, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = p.accent, modifier = Modifier.size(30.dp))
     }
 }
+
+@Composable
+fun Gap(size: Int) = Spacer(Modifier.size(size.dp))
+
+@Suppress("unused")
+private fun Modifier.dim(enabled: Boolean) = this.alpha(if (enabled) 1f else 0.4f)

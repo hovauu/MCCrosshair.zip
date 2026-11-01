@@ -1,10 +1,6 @@
 package com.mccrosshair.app
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,25 +18,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FormatColorFill
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PhotoSizeSelectSmall
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,16 +48,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
@@ -68,28 +64,20 @@ private val RU = Locale.forLanguageTag("ru")
 
 @Composable
 fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Unit) {
-    val ctx = LocalContext.current
     val s = store.state
     val p = LocalPalette.current
 
     var a11yDialog by remember { mutableStateOf(false) }
     var styleDialog by remember { mutableStateOf(false) }
     var colorDialog by remember { mutableStateOf(false) }
+    var appsDialog by remember { mutableStateOf(false) }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            if (CustomImage.importFrom(ctx, uri)) {
-                store.edit {
-                    putBoolean(K.CUSTOM, true)
-                    putLong(K.CUSTOM_VERSION, System.currentTimeMillis())
-                }
-            } else {
-                Toast.makeText(ctx, "Не удалось открыть картинку", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    val customBmp = remember(s.customVersion) { CustomImage.load(ctx)?.asImageBitmap() }
     val color = Color(s.color)
+
+    fun move(dx: Int, dy: Int) = store.edit {
+        putInt(K.POS_X, (s.posX + dx).coerceIn(-Limits.POS_MAX, Limits.POS_MAX))
+        putInt(K.POS_Y, (s.posY + dy).coerceIn(-Limits.POS_MAX, Limits.POS_MAX))
+    }
 
     Column(
         Modifier
@@ -98,28 +86,18 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        // ---- верхняя панель ----
+        // ---- верхняя панель (без названия) ----
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { store.edit { putBoolean(K.DARK, !s.dark) } }) {
                 Icon(Icons.Filled.Brightness6, "Тема", tint = p.text)
             }
-            Text(
-                buildAnnotatedString {
-                    withStyle(SpanStyle(color = p.text)) { append("CROSSHAIR") }
-                    withStyle(SpanStyle(color = p.accent)) { append("MC") }
-                },
-                Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.sp
-            )
+            Spacer(Modifier.weight(1f))
             IconButton(onClick = openSettings) {
                 Icon(Icons.Filled.Settings, "Настройки", tint = p.text)
             }
         }
 
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(20.dp))
 
         // ---- START / STOP ----
         OutlinedButton(
@@ -127,37 +105,25 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
                 if (!serviceOn) a11yDialog = true
                 else store.edit { putBoolean(K.ENABLED, !s.enabled) }
             },
-            modifier = Modifier.align(Alignment.CenterHorizontally).width(190.dp).height(68.dp),
+            modifier = Modifier.align(Alignment.CenterHorizontally).width(140.dp).height(52.dp),
             shape = RoundedCornerShape(50),
-            border = BorderStroke(3.dp, p.accent),
+            border = BorderStroke(2.5.dp, p.accent),
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = if (s.enabled) p.accent else Color.Transparent,
                 contentColor = if (s.enabled) p.bg else p.text
             )
         ) {
-            Text(if (s.enabled) "STOP" else "START", fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text(if (s.enabled) "STOP" else "START", fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
 
-        Text(
-            when {
-                !serviceOn -> "Служба выключена — прицел не сможет появиться"
-                s.enabled -> "Прицел показан поверх всех приложений"
-                s.autostart -> "Прицел появится сам, когда откроешь Minecraft"
-                else -> "Прицел выключен"
-            },
-            Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 36.dp),
-            color = if (serviceOn) p.textDim else p.warn,
-            textAlign = TextAlign.Center,
-            fontSize = 14.sp
-        )
+        Spacer(Modifier.height(28.dp))
 
         // ---- служба выключена ----
         if (!serviceOn) {
             SectionCard {
                 Text("Включи службу «Прицел MC»", fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Text(
-                    "Она рисует прицел поверх игры и замечает, когда ты открываешь Minecraft. " +
-                        "Открой «Специальные возможности», найди «Прицел MC» и включи.",
+                    "Без неё прицел не сможет появиться поверх игры.",
                     Modifier.padding(top = 6.dp, bottom = 10.dp),
                     color = p.textDim, fontSize = 14.sp
                 )
@@ -165,13 +131,9 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
             }
         }
 
-        // ---- переключатели ----
+        // ---- автозапуск ----
         SectionCard {
-            SwitchRow("Мини-настройки в игре", s.mini) { v -> store.edit { putBoolean(K.MINI, v) } }
-            SwitchRow("Открывать мини-настройки при старте", s.miniOnStart, enabled = s.mini) { v ->
-                store.edit { putBoolean(K.MINI_ON_START, v) }
-            }
-            SwitchRow("Автозапуск в Minecraft", s.autostart) { v ->
+            SwitchRow("Автозапуск", s.autostart) { v ->
                 store.edit { putBoolean(K.AUTOSTART, v) }
                 if (v && !serviceOn) a11yDialog = true
             }
@@ -179,40 +141,17 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
 
         // ---- стиль и цвет ----
         SectionCard {
-            Spacer(Modifier.height(4.dp))
-            Segmented("ВСТРОЕННЫЙ", "СВОЙ", rightSelected = s.custom) { right ->
-                if (right && !CustomImage.exists(ctx)) picker.launch("image/*")
-                else store.edit { putBoolean(K.CUSTOM, right) }
-            }
             Row(
-                Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                if (!s.custom) {
-                    BigAction("Стиль", onClick = { styleDialog = true }) {
-                        Box(
-                            Modifier.size(84.dp).clip(RoundedCornerShape(24.dp)).background(p.tile),
-                            contentAlignment = Alignment.Center
-                        ) { CrosshairGlyph(s.style, color, Modifier.size(44.dp)) }
-                    }
-                } else {
-                    BigAction("Картинка", onClick = { picker.launch("image/*") }) {
-                        Box(
-                            Modifier.size(84.dp).clip(RoundedCornerShape(24.dp)).background(p.tile),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (customBmp != null) {
-                                Image(
-                                    customBmp, null, Modifier.size(52.dp),
-                                    colorFilter = if (s.tintCustom) ColorFilter.tint(color) else null
-                                )
-                            } else {
-                                Icon(Icons.Filled.Image, null, tint = Color.White, modifier = Modifier.size(36.dp))
-                            }
-                        }
-                    }
+                BigAction("Стиль", onClick = { styleDialog = true }) {
+                    Box(
+                        Modifier.size(84.dp).clip(RoundedCornerShape(24.dp)).background(p.tile),
+                        contentAlignment = Alignment.Center
+                    ) { CrosshairGlyph(s.style, color, Modifier.size(44.dp).rotate(s.rotation)) }
                 }
-                BigAction("Цвет", enabled = !s.custom || s.tintCustom, onClick = { colorDialog = true }) {
+                BigAction("Цвет", onClick = { colorDialog = true }) {
                     Box(
                         Modifier.size(84.dp).clip(RoundedCornerShape(24.dp)).background(color),
                         contentAlignment = Alignment.Center
@@ -225,66 +164,75 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
                     }
                 }
             }
-            if (s.custom) {
-                SwitchRow("Перекрашивать картинку", s.tintCustom) { v -> store.edit { putBoolean(K.TINT_CUSTOM, v) } }
-            }
         }
 
-        // ---- ползунки ----
+        // ---- прозрачность, поворот, размер ----
         SectionCard {
             PillSlider(
                 Icons.Filled.Visibility, "Прозрачность", s.opacity,
                 Limits.OPACITY_MIN..1f, 0.01f, { String.format(RU, "%.2f", it) }
             ) { v -> store.edit { putFloat(K.OPACITY, v) } }
+            ResetRow { store.edit { putFloat(K.OPACITY, Defaults.OPACITY) } }
 
             PillSlider(
-                Icons.Filled.ZoomOutMap, "Размер", s.sizeDp,
-                Limits.SIZE_MIN..Limits.SIZE_MAX, 1f, { "${it.roundToInt()} dp" }
+                Icons.Filled.RotateRight, "Поворот", s.rotation,
+                0f..360f, 1f, { "${it.roundToInt()}°" }
+            ) { v -> store.edit { putFloat(K.ROTATION, v) } }
+            ResetRow { store.edit { putFloat(K.ROTATION, Defaults.ROTATION) } }
+
+            PillSlider(
+                Icons.Filled.PhotoSizeSelectSmall, "Размер", s.sizePct,
+                Limits.SIZE_MIN..Limits.SIZE_MAX, 1f, { "${it.roundToInt()}%" }
             ) { v -> store.edit { putFloat(K.SIZE, v) } }
+            ResetRow { store.edit { putFloat(K.SIZE, Defaults.SIZE) } }
+        }
 
-            PillSlider(
-                Icons.Filled.SwapHoriz, "Вбок", s.offsetXDp,
-                -Limits.OFFSET..Limits.OFFSET, 1f, ::signed, stepButtons = true
-            ) { v -> store.edit { putFloat(K.OFF_X, v) } }
+        // ---- фильтр приложений ----
+        SectionCard {
+            SwitchRow("Фильтр приложений", s.filter) { v -> store.edit { putBoolean(K.FILTER, v) } }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
+                Spacer(Modifier.weight(1f))
+                PillButton("Выбрать приложения", Icons.Filled.Apps) { appsDialog = true }
+            }
+        }
 
-            PillSlider(
-                Icons.Filled.SwapVert, "Вверх/вниз", s.offsetYDp,
-                -Limits.OFFSET..Limits.OFFSET, 1f, ::signed, stepButtons = true
-            ) { v -> store.edit { putFloat(K.OFF_Y, v) } }
-
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { store.edit { putFloat(K.OFF_X, 0f); putFloat(K.OFF_Y, 0f) } }) {
-                    Icon(Icons.Filled.CenterFocusStrong, null, Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("По центру", fontSize = 16.sp)
+        // ---- положение ----
+        SectionCard {
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    ValueChip("X", s.posX)
+                    ValueChip("Y", s.posY)
+                    Spacer(Modifier.height(8.dp))
+                    StepField(s.step) { v -> store.edit { putInt(K.STEP, v) } }
                 }
-                TextButton(onClick = {
-                    store.edit {
-                        putInt(K.COLOR, Defaults.COLOR)
-                        putFloat(K.OPACITY, Defaults.OPACITY)
-                        putFloat(K.SIZE, Defaults.SIZE)
-                        putFloat(K.OFF_X, 0f)
-                        putFloat(K.OFF_Y, 0f)
-                        putString(K.STYLE, Defaults.STYLE.name)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    ArrowButton(Icons.Filled.ArrowUpward) { move(0, -s.step) }
+                    Row {
+                        ArrowButton(Icons.AutoMirrored.Filled.ArrowBack) { move(-s.step, 0) }
+                        Spacer(Modifier.width(56.dp))
+                        ArrowButton(Icons.AutoMirrored.Filled.ArrowForward) { move(s.step, 0) }
                     }
-                }) {
-                    Icon(Icons.Filled.Refresh, null, Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Сброс", fontSize = 16.sp)
+                    ArrowButton(Icons.Filled.ArrowDownward) { move(0, s.step) }
                 }
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                PillButton("Сброс X", Icons.Filled.Refresh) { store.edit { putInt(K.POS_X, 0) } }
+                Spacer(Modifier.width(8.dp))
+                PillButton("Сброс Y", Icons.Filled.Refresh) { store.edit { putInt(K.POS_Y, 0) } }
             }
         }
         Spacer(Modifier.height(24.dp))
     }
 
-    if (a11yDialog) {
-        AccessibilityDialog(onDismiss = { a11yDialog = false })
-    }
+    if (a11yDialog) AccessibilityDialog(onDismiss = { a11yDialog = false })
     if (styleDialog) {
         StyleDialog(
             current = s.style,
             color = color,
-            onPick = { st -> store.edit { putString(K.STYLE, st.name); putBoolean(K.CUSTOM, false) } },
+            onPick = { st -> store.edit { putString(K.STYLE, st.name) } },
             onDismiss = { styleDialog = false }
         )
     }
@@ -295,9 +243,40 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
             onDismiss = { colorDialog = false }
         )
     }
+    if (appsDialog) {
+        AppPickerDialog(
+            selected = s.targets,
+            onSave = { set -> store.edit { putString(K.TARGETS, set.joinToString("\n")) } },
+            onDismiss = { appsDialog = false }
+        )
+    }
 }
 
-private fun signed(v: Float): String {
-    val i = v.roundToInt()
-    return if (i > 0) "+$i" else "$i"
+/** Поле «Шаг»: на сколько пикселей сдвигает одно нажатие стрелки. */
+@Composable
+private fun StepField(step: Int, onChange: (Int) -> Unit) {
+    val p = LocalPalette.current
+    var text by remember { mutableStateOf(step.toString()) }
+    Column(
+        Modifier
+            .width(130.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(p.btn)
+            .padding(horizontal = 18.dp, vertical = 10.dp)
+    ) {
+        Text("Шаг", color = p.textDim, fontSize = 14.sp)
+        BasicTextField(
+            value = text,
+            onValueChange = { t ->
+                val digits = t.filter { it.isDigit() }.take(4)
+                text = digits
+                digits.toIntOrNull()?.takeIf { it > 0 }?.let(onChange)
+            },
+            singleLine = true,
+            textStyle = TextStyle(color = p.text, fontSize = 20.sp),
+            cursorBrush = SolidColor(p.accent),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+        )
+    }
 }
