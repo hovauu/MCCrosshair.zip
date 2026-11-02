@@ -94,6 +94,10 @@ fun SettingsScreen(store: SettingsStore, serviceOn: Boolean, onBack: () -> Unit)
                 color = p.textDim, fontSize = 14.sp
             )
             OutlinedButton(onClick = { SystemScreens.battery(ctx) }) { Text("Экономия батареи") }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { SystemScreens.miuiAutostart(ctx) }) { Text("Автозапуск (Xiaomi)") }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { SystemScreens.overlay(ctx) }) { Text("Поверх других приложений") }
         }
         Spacer(Modifier.height(24.dp))
     }

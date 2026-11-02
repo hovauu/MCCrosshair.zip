@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Запасной способ показать прицел, если окно службы недоступно -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <!-- Нужно, чтобы показать список приложений в «Выбрать приложения» -->
     <queries>
         <intent>

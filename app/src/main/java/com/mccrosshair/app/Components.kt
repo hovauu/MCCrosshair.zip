@@ -61,6 +61,25 @@ object SystemScreens {
     )
 
     fun battery(ctx: Context) = ctx.go(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+
+    fun overlay(ctx: Context) = ctx.go(
+        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}"))
+    )
+
+    /** Экран «Автозапуск» на Xiaomi (MIUI/HyperOS); на других телефонах — «О приложении». */
+    fun miuiAutostart(ctx: Context) {
+        val i = Intent().setComponent(
+            android.content.ComponentName(
+                "com.miui.securitycenter",
+                "com.miui.permcenter.autostart.AutoStartManagementActivity"
+            )
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            ctx.startActivity(i)
+        } catch (e: Exception) {
+            appDetails(ctx)
+        }
+    }
 }
 
 // ---------- прицел для превью ----------

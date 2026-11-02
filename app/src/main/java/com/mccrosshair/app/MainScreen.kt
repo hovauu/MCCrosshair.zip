@@ -66,6 +66,7 @@ private val RU = Locale.forLanguageTag("ru")
 fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Unit) {
     val s = store.state
     val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
 
     var a11yDialog by remember { mutableStateOf(false) }
     var styleDialog by remember { mutableStateOf(false) }
@@ -103,7 +104,10 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
         OutlinedButton(
             onClick = {
                 if (!serviceOn) a11yDialog = true
-                else store.edit { putBoolean(K.ENABLED, !s.enabled) }
+                else {
+                    store.prefs.edit().putBoolean(K.ENABLED, !s.enabled).commit()
+                    CrosshairService.instance?.refresh()
+                }
             },
             modifier = Modifier.align(Alignment.CenterHorizontally).width(140.dp).height(52.dp),
             shape = RoundedCornerShape(50),
@@ -128,6 +132,44 @@ fun MainScreen(store: SettingsStore, serviceOn: Boolean, openSettings: () -> Uni
                     color = p.textDim, fontSize = 14.sp
                 )
                 Button(onClick = { a11yDialog = true }) { Text("Как включить") }
+            }
+        } else if (!CrosshairService.running) {
+            // Служба включена в настройках, но система её не запустила (частая история на Xiaomi)
+            SectionCard {
+                Text("Служба включена, но не работает", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = p.warn)
+                Text(
+                    "Телефон не запустил службу «Прицел MC». Так бывает после переустановки.\n\n" +
+                        "1. Открой «Спец. возможности», выключи «Прицел MC» и включи снова.\n" +
+                        "2. На Xiaomi: разреши приложению «Автозапуск».\n" +
+                        "3. Если не помогло — перезагрузи телефон.",
+                    Modifier.padding(top = 6.dp, bottom = 10.dp),
+                    color = p.textDim, fontSize = 14.sp
+                )
+                Row {
+                    Button(onClick = { SystemScreens.accessibility(ctx) }) { Text("Спец. возможности") }
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(onClick = { SystemScreens.miuiAutostart(ctx) }) { Text("Автозапуск") }
+                }
+            }
+        } else if (CrosshairService.lastError != null && !CrosshairService.visible && (s.enabled || s.autostart)) {
+            SectionCard {
+                Text("Прицел не смог появиться", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = p.warn)
+                Text(
+                    "Разреши «Поверх других приложений» — это запасной способ показать прицел.",
+                    Modifier.padding(top = 6.dp, bottom = 6.dp),
+                    color = p.textDim, fontSize = 14.sp
+                )
+                Text(CrosshairService.lastError ?: "", color = p.textDim, fontSize = 11.sp)
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = { SystemScreens.overlay(ctx) }) { Text("Разрешить") }
+            }
+        } else if (s.enabled && s.filter && !CrosshairService.visible) {
+            SectionCard {
+                Text(
+                    "Включён «Фильтр приложений»: прицел виден только в выбранных приложениях " +
+                        "(например, в Minecraft), а здесь его не будет.",
+                    color = p.textDim, fontSize = 14.sp
+                )
             }
         }
 
